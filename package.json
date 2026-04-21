@@ -1,0 +1,17 @@
+{
+  "name": "test-webhook-endpoint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal Express webhook endpoint for Meta/WhatsApp testing on Render.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
