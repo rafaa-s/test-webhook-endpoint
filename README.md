@@ -12,6 +12,8 @@ Proyecto minimo para desplegar un endpoint de prueba en Render y verificar webho
 
 ## Comportamiento
 
+- `GET /healthz`
+  - devuelve `200` para health checks de Render
 - `GET /`
   - devuelve `200` con `hub.challenge` si `hub.mode=subscribe` y `hub.verify_token` coincide con `VERIFY_TOKEN`
   - devuelve `403` en cualquier otro caso

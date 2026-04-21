@@ -8,6 +8,10 @@ const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0";
 const verifyToken = process.env.VERIFY_TOKEN;
 
+app.get("/healthz", (_req, res) => {
+  return res.status(200).json({ ok: true });
+});
+
 app.get("/", (req, res) => {
   const mode = req.query["hub.mode"];
   const challenge = req.query["hub.challenge"];

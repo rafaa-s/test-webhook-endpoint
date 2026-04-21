@@ -5,6 +5,7 @@ services:
     plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /healthz
     envVars:
       - key: VERIFY_TOKEN
         sync: false
