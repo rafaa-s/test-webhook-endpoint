@@ -22,6 +22,14 @@ app.get("/", (req, res) => {
     return res.status(200).send(challenge);
   }
 
+  console.warn("WEBHOOK VERIFICATION FAILED", {
+    mode,
+    hasChallenge: typeof challenge !== "undefined",
+    hasToken: typeof token !== "undefined" && token !== "",
+    verifyTokenConfigured: Boolean(verifyToken),
+    tokenMatches: token === verifyToken,
+  });
+
   return res.status(403).end();
 });
 
