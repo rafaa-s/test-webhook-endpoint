@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local Ollama Chat Bridge</title>
+  <link rel="stylesheet" href="/chat/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="brand">
+        <div class="brand-mark">WB</div>
+        <div>
+          <p class="eyebrow">Local Bridge</p>
+          <h1>Webhook x Ollama</h1>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel-label">Flow</p>
+        <p class="panel-copy">UI local -> payload tipo WhatsApp -> procesador webhook -> Ollama -> respuesta</p>
+      </div>
+
+      <div class="panel">
+        <p class="panel-label">Session</p>
+        <code id="session-id">loading</code>
+      </div>
+
+      <div class="panel">
+        <p class="panel-label">Model</p>
+        <strong id="model-name">loading</strong>
+        <p id="ollama-status" class="panel-copy">Checking Ollama...</p>
+      </div>
+
+      <div class="actions">
+        <button id="refresh-button" type="button" class="ghost-button">Refresh status</button>
+        <button id="reset-button" type="button" class="ghost-button danger">Clear chat</button>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <header class="stage-header">
+        <div>
+          <p class="eyebrow">Chat UI local</p>
+          <h2>Gemma 4 via Ollama</h2>
+        </div>
+        <span id="composer-status" class="status-pill">Ready</span>
+      </header>
+
+      <section id="messages" class="messages" aria-live="polite"></section>
+
+      <form id="composer" class="composer">
+        <label class="composer-label" for="message-input">Mensaje</label>
+        <div class="composer-row">
+          <textarea
+            id="message-input"
+            name="message"
+            rows="1"
+            placeholder="Escribe algo y el backend lo convertira a un payload tipo webhook antes de llamar a Ollama..."
+            required
+          ></textarea>
+          <button type="submit" class="send-button">Send</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <template id="message-template">
+    <article class="message">
+      <div class="message-meta">
+        <span class="message-role"></span>
+        <span class="message-time"></span>
+      </div>
+      <div class="message-body"></div>
+    </article>
+  </template>
+
+  <script src="/chat/app.js"></script>
+</body>
+</html>

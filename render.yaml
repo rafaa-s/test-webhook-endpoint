@@ -9,3 +9,7 @@ services:
     envVars:
       - key: VERIFY_TOKEN
         sync: false
+      - key: FORWARD_WEBHOOK_URL
+        sync: false
+      - key: FORWARD_WEBHOOK_TIMEOUT_MS
+        value: 15000
