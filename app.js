@@ -25,6 +25,14 @@ const processInboundWebhooks = process.env.PROCESS_INBOUND_WEBHOOKS === "true";
 const maxConversationMessages = Number(process.env.MAX_CONVERSATION_MESSAGES) || 24;
 const forwardWebhookUrl = normalizeText(process.env.FORWARD_WEBHOOK_URL);
 const forwardWebhookTimeoutMs = Number(process.env.FORWARD_WEBHOOK_TIMEOUT_MS) || 15000;
+const renderApiBaseUrl = normalizeText(process.env.RENDER_API_BASE_URL) || "https://api.render.com/v1";
+const renderApiKey = normalizeText(process.env.RENDER_API_KEY);
+const renderServiceId =
+  normalizeText(process.env.RENDER_FORWARD_WEBHOOK_SERVICE_ID) ||
+  normalizeText(process.env.RENDER_SERVICE_ID);
+const renderDynamicForwardWebhookUrl =
+  process.env.RENDER_DYNAMIC_FORWARD_WEBHOOK_URL === "true";
+const forwardWebhookCacheTtlMs = Number(process.env.FORWARD_WEBHOOK_CACHE_TTL_MS) || 10000;
 const systemPrompt =
   process.env.SYSTEM_PROMPT ||
   [
@@ -34,6 +42,12 @@ const systemPrompt =
   ].join(" ");
 
 const conversations = new Map();
+const forwardWebhookState = {
+  cachedUrl: forwardWebhookUrl,
+  expiresAt: 0,
+  lastLoggedUrl: "",
+  inFlight: null,
+};
 
 app.use("/chat", express.static(publicDir));
 
@@ -176,9 +190,11 @@ app.post("/", async (req, res) => {
       }
     }
 
-    if (forwardWebhookUrl) {
+    const activeForwardWebhookUrl = await resolveForwardWebhookUrl();
+
+    if (activeForwardWebhookUrl) {
       const forwardResult = await forwardWebhook({
-        url: forwardWebhookUrl,
+        url: activeForwardWebhookUrl,
         rawBody,
         signatureHeader: req.get("x-hub-signature-256"),
       });
@@ -202,7 +218,11 @@ app.listen(port, host, () => {
   console.log(`\nListening on ${host}:${port}\n`);
   console.log(`Local chat UI: http://${host === "0.0.0.0" ? "127.0.0.1" : host}:${port}/chat`);
   console.log(`Ollama target: ${ollamaBaseUrl}/chat (${ollamaModel})`);
-  if (forwardWebhookUrl) {
+  if (renderDynamicForwardWebhookUrl) {
+    console.log(
+      `Forward webhook target: dynamic Render lookup (${renderServiceId || "missing service id"})`,
+    );
+  } else if (forwardWebhookUrl) {
     console.log(`Forwarding webhooks to: ${forwardWebhookUrl}`);
   }
 });
@@ -518,4 +538,95 @@ async function forwardWebhook({ url, rawBody, signatureHeader }) {
     status: response.status,
     body: responseText.slice(0, 500),
   };
+}
+
+async function resolveForwardWebhookUrl() {
+  if (!renderDynamicForwardWebhookUrl) {
+    return forwardWebhookUrl;
+  }
+
+  if (!renderApiKey || !renderServiceId) {
+    if (forwardWebhookUrl) {
+      return forwardWebhookUrl;
+    }
+
+    console.warn(
+      "Dynamic Render lookup is enabled but RENDER_API_KEY or RENDER_SERVICE_ID is missing.",
+    );
+    return "";
+  }
+
+  const now = Date.now();
+
+  if (forwardWebhookState.cachedUrl && now < forwardWebhookState.expiresAt) {
+    return forwardWebhookState.cachedUrl;
+  }
+
+  if (forwardWebhookState.inFlight) {
+    return forwardWebhookState.inFlight;
+  }
+
+  forwardWebhookState.inFlight = fetchForwardWebhookUrlFromRender()
+    .then((url) => {
+      forwardWebhookState.cachedUrl = url;
+      forwardWebhookState.expiresAt = Date.now() + forwardWebhookCacheTtlMs;
+      logForwardWebhookTarget(url);
+      return url;
+    })
+    .catch((error) => {
+      console.error(`Failed to refresh FORWARD_WEBHOOK_URL from Render: ${error.message}`);
+
+      if (forwardWebhookState.cachedUrl) {
+        return forwardWebhookState.cachedUrl;
+      }
+
+      return forwardWebhookUrl;
+    })
+    .finally(() => {
+      forwardWebhookState.inFlight = null;
+    });
+
+  return forwardWebhookState.inFlight;
+}
+
+async function fetchForwardWebhookUrlFromRender() {
+  const response = await fetch(
+    `${renderApiBaseUrl}/services/${renderServiceId}/env-vars/FORWARD_WEBHOOK_URL`,
+    {
+      headers: {
+        Authorization: `Bearer ${renderApiKey}`,
+      },
+      signal: AbortSignal.timeout(forwardWebhookTimeoutMs),
+    },
+  );
+
+  const responseText = await response.text();
+  const payload = tryParseJson(responseText);
+
+  if (response.status === 404) {
+    return "";
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Render lookup error ${response.status}: ${responseText || response.statusText}`,
+    );
+  }
+
+  return normalizeText(
+    payload?.value ||
+      payload?.envVar?.value ||
+      payload?.data?.value ||
+      payload?.envVarValue ||
+      "",
+  );
+}
+
+function logForwardWebhookTarget(url) {
+  if (!url || url === forwardWebhookState.lastLoggedUrl) {
+    return;
+  }
+
+  forwardWebhookState.lastLoggedUrl = url;
+  console.log(`Forwarding webhooks to: ${url}`);
 }

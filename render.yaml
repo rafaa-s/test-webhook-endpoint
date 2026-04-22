@@ -13,3 +13,11 @@ services:
         sync: false
       - key: FORWARD_WEBHOOK_TIMEOUT_MS
         value: 15000
+      - key: RENDER_DYNAMIC_FORWARD_WEBHOOK_URL
+        value: true
+      - key: FORWARD_WEBHOOK_CACHE_TTL_MS
+        value: 10000
+      - key: RENDER_API_KEY
+        sync: false
+      - key: RENDER_FORWARD_WEBHOOK_SERVICE_ID
+        sync: false

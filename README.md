@@ -37,6 +37,7 @@ Proyecto base para:
   - imprime el body JSON completo en consola
   - opcionalmente puede procesar mensajes entrantes si `PROCESS_INBOUND_WEBHOOKS=true`
   - opcionalmente puede reenviar el webhook completo a otra URL si `FORWARD_WEBHOOK_URL` esta definido
+  - opcionalmente puede consultar `FORWARD_WEBHOOK_URL` en tiempo real desde la API de Render si `RENDER_DYNAMIC_FORWARD_WEBHOOK_URL=true`
 
 ## Uso local
 
@@ -54,6 +55,10 @@ $env:HOST="0.0.0.0"
 $env:OLLAMA_BASE_URL="http://127.0.0.1:11434/api"
 $env:OLLAMA_MODEL="gemma4:e4b"
 $env:FORWARD_WEBHOOK_URL="https://tu-url-publica/api/webhook/meta"
+$env:RENDER_DYNAMIC_FORWARD_WEBHOOK_URL="false"
+$env:RENDER_API_KEY=""
+$env:RENDER_FORWARD_WEBHOOK_SERVICE_ID=""
+$env:FORWARD_WEBHOOK_CACHE_TTL_MS="10000"
 ```
 
 3. Asegurate de tener Ollama corriendo localmente.
@@ -87,6 +92,10 @@ Usa estos valores al crear el servicio:
 - Start command: `npm start`
 - Environment Variable: `VERIFY_TOKEN=<tu_token>`
 - Environment Variable: `FORWARD_WEBHOOK_URL=<url_publica_destino>` si quieres reenviar a otra app
+- Environment Variable: `RENDER_DYNAMIC_FORWARD_WEBHOOK_URL=true` si quieres que el servicio consulte el valor actual en Render y no dependa de redeploys
+- Environment Variable: `RENDER_API_KEY=<api_key>` para consultar la API de Render
+- Environment Variable: `RENDER_FORWARD_WEBHOOK_SERVICE_ID=<service_id>` si quieres fijar el servicio a consultar. Si lo omites en Render, se usa `RENDER_SERVICE_ID` cuando este disponible
+- Environment Variable: `FORWARD_WEBHOOK_CACHE_TTL_MS=10000` para reducir llamadas a la API de Render
 
 Tambien puedes dejar que Render detecte `render.yaml` si subes este directorio tal cual a GitHub.
 
@@ -105,3 +114,4 @@ Si todo esta bien, Render mostrara `WEBHOOK VERIFIED` en el log.
 - El endpoint local no envia mensajes a WhatsApp; solo reutiliza la forma del payload para probar el flujo.
 - Si Ollama no esta corriendo, la UI te mostrara el error del backend.
 - Render no puede reenviar a `http://localhost:3000` directamente. Si tu app Next corre local, necesitas una URL publica temporal, por ejemplo con Cloudflare Tunnel o ngrok, y usar esa URL en `FORWARD_WEBHOOK_URL`.
+- Si activas `RENDER_DYNAMIC_FORWARD_WEBHOOK_URL=true`, el servidor consulta el valor actual de `FORWARD_WEBHOOK_URL` en Render durante runtime y lo cachea por unos segundos. Esto evita redeploys solo para refrescar la URL temporal del tunel.
